@@ -1,0 +1,65 @@
+import requests
+import json
+import pandas as pd
+
+# ============================================================
+#  FILL IN YOUR DETAILS BELOW
+# ============================================================
+
+API_KEY    = "NS5mBxOz79DkLZBOG3NJVJ9kPreCb7SJUNPbE4UcvdE"
+USER_EMAIL = ""          # Optional: your SourceWhale email, or leave as ""
+
+# ============================================================
+#  DO NOT EDIT BELOW THIS LINE
+# ============================================================
+
+def flatten(obj, prefix=""):
+    """Recursively flatten a nested dict/list into a flat dict."""
+    result = {}
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            key = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                result.update(flatten(v, key))
+            elif isinstance(v, list):
+                result[key] = ", ".join(str(i) for i in v) if v else ""
+            else:
+                result[key] = v if v is not None else ""
+    return result
+
+# ------ CAMPAIGNS ------
+
+params = {"includeMetrics": "true"}
+if USER_EMAIL:
+    params["userEmail"] = USER_EMAIL
+
+response = requests.get(
+    "https://sourcewhale.app/public-api/v1/campaigns/list",
+    headers={"api-key": API_KEY},
+    params=params
+)
+
+if response.status_code == 401:
+    raise Exception("ERROR: Invalid API key. Please check the value in the script.")
+elif response.status_code != 200:
+    raise Exception(f"ERROR: API returned status {response.status_code}\n{response.text}")
+
+data = response.json()
+
+# Handle different response shapes
+if isinstance(data, list):
+    campaigns = data
+elif isinstance(data, dict):
+    campaigns = data.get("campaigns") or data.get("data") or data.get("results") or []
+else:
+    campaigns = []
+
+# Flatten campaigns into rows
+rows = [flatten(c) for c in campaigns]
+
+# Convert to DataFrame for Power BI
+df = pd.DataFrame(rows)
+
+# Final output for Power BI
+df
+}
